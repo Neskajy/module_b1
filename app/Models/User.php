@@ -52,4 +52,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class, "post_maker_id");
     }
+
+    public function likes(): HasMany
+    {
+        return $this->HasMany(PivotLike::class, "user_id");
+    }
 }
