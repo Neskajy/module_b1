@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use http\Env\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
@@ -39,7 +40,8 @@ class UserController extends Controller
         ], 201);
     }
 
-    public function auth(Request $request) {
+    public function auth(Request $request): JsonResponse
+    {
         $validator = Validator::make($request->all(), [
             "email" => "required|email",
             "password" => "required|min:3"
@@ -73,5 +75,52 @@ class UserController extends Controller
                 "message" => "failed"
             ], 401);
         }
+    }
+
+    public function logout(): JsonResponse
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json([
+                "message" => "Вы и так не авторизованы, лол"
+            ], 403);
+        }
+
+        $user->currentAccessToken()->delete();
+
+        return response()->json([
+            "message" => "Logged out"
+        ], 204);
+    }
+
+    public function show(Request $request, $user_id): JsonResponse
+    {
+        $user = User::query()
+            ->where("id", $user_id)
+            ->where("role", "!=", "admin")
+            ->select("users.*")
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                "message" => "Not Found"
+            ], 404);
+        }
+
+        if ($user->isBanned) {
+            return response()->json([
+                "message" => "User has been banned"
+            ], 404);
+        }
+
+        $posts = $user->posts()->paginate(10);
+
+        return response()->json([
+            "data" => [
+                "nickname" => $user->nickname,
+                "posts" => $posts
+            ]
+        ], 200);
     }
 }
